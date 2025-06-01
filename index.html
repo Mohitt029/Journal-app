@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Journal App</title>
+  <link href="./styles.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Lora:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/react@18.2.0/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/axios@1.6.8/dist/axios.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.24.6/babel.min.js"></script>
+</head>
+<body class="bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors duration-300">
+  <div id="root"></div>
+  <script type="text/babel">
+    console.log('Script started');
+    try {
+      const { useState, useEffect, useContext, createContext } = React;
+
+      // Auth Context
+      const AuthContext = createContext();
+      console.log('AuthContext created');
+
+      const AuthProvider = ({ children }) => {
+        const [user, setUser] = useState(null);
+        const [token, setToken] = useState(localStorage.getItem('token'));
+        console.log('AuthProvider initialized', { user, token });
+
+        useEffect(() => {
+          if (token) {
+            setUser({ username: localStorage.getItem('username') });
+            axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+          } else {
+            setUser(null);
+            delete axios.defaults.headers.common['Authorization'];
+          }
+        }, [token]);
+
+        const login = async (username, password) => {
+          try {
+            const response = await axios.post('http://localhost:9000/api/auth/login', { username, password });
+            const { token } = response.data;
+            localStorage.setItem('token', token);
+            localStorage.setItem('username', username);
+            setToken(token);
+            alert('Logged in successfully!');
+            return true;
+          } catch (error) {
+            console.error('Login error:', error.response?.data, error.response?.status);
+            alert(error.response?.data || 'Login failed');
+            return false;
+          }
+        };
+
+        const logout = async () => {
+          try {
+            await axios.post('http://localhost:9000/api/auth/logout', {}, {
+              headers: { Authorization: `Bearer ${token}` }
+            });
+            localStorage.removeItem('token');
+            localStorage.removeItem('username');
+            setToken(null);
+            alert('Logged out successfully!');
+          } catch (error) {
+            console.error('Logout error:', error.response?.data);
+            alert('Logout failed');
+          }
+        };
+
+        return (
+          <AuthContext.Provider value={{ user, token, login, logout }}>
+            {children}
+          </AuthContext.Provider>
+        );
+      };
+
+      // Navbar Component
+      const Navbar = () => {
+        const { user, logout } = useContext(AuthContext);
+        const [darkMode, setDarkMode] = useState(localStorage.getItem('darkMode') === 'true');
+        console.log('Navbar rendered', { user, darkMode });
+
+        useEffect(() => {
+          console.log('Dark mode toggled:', darkMode);
+          if (darkMode) {
+            document.documentElement.classList.add('dark');
+            localStorage.setItem('darkMode', 'true');
+          } else {
+            document.documentElement.classList.remove('dark');
+            localStorage.setItem('darkMode', 'false');
+          }
+        }, [darkMode]);
+
+        return (
+          <nav className="bg-[#f8e7d2] dark:bg-[#2f2a1d] shadow-md sticky top-0 z-50">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="flex justify-between h-16">
+                <div className="flex items-center">
+                  <h1 className="text-2xl font-bold text-[#8b5a2b] dark:text-[#e0c589] font-['Playfair_Display',_serif]">Journal App</h1>
+                </div>
+                <div className="flex items-center space-x-4">
+                  {!user ? (
+                    <>
+                      <a href="#/register" className="text-[#8b5a2b] dark:text-[#e0c589] hover:text-[#a66b3b] dark:hover:text-[#d4a373] font-['Lora',_serif]">Register</a>
+                      <a href="#/login" className="text-[#8b5a2b] dark:text-[#e0c589] hover:text-[#a66b3b] dark:hover:text-[#d4a373] font-['Lora',_serif]">Login</a>
+                    </>
+                  ) : (
+                    <>
+                      <a href="#/journal" className="text-[#8b5a2b] dark:text-[#e0c589] hover:text-[#a66b3b] dark:hover:text-[#d4a373] font-['Lora',_serif]">Journal</a>
+                      <button onClick={logout} className="text-[#8b5a2b] dark:text-[#e0c589] hover:text-[#a66b3b] dark:hover:text-[#d4a373] font-['Lora',_serif]">Logout</button>
+                    </>
+                  )}
+                  <button onClick={() => setDarkMode(!darkMode)} className="p-2 rounded-full bg-[#d4a373] dark:bg-[#a68a64] text-[#8b5a2b] dark:text-[#e0c589] hover:bg-[#a66b3b] dark:hover:bg-[#8b6f47] transition">
+                    {darkMode ? '🌞' : '🌙'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </nav>
+        );
+      };
+
+      // Register Component
+      const Register = () => {
+        const [username, setUsername] = useState('');
+        const [password, setPassword] = useState('');
+        const [email, setEmail] = useState('');
+        console.log('Register rendered');
+
+        const handleSubmit = async (e) => {
+          e.preventDefault();
+          try {
+            console.log('Registering:', { username, password, email });
+            const response = await axios.post('http://localhost:9000/api/users', {
+              username,
+              password,
+              email: email || null
+            });
+            console.log('Registration response:', response.data);
+            alert('Registered successfully! Please login.');
+            window.location.hash = '#/login';
+          } catch (error) {
+            console.error('Registration error:', error.response?.data, error.response?.status);
+            alert(error.response?.data?.error || 'Registration failed');
+          }
+        };
+
+        return (
+          <div className="max-w-md mx-auto mt-10 p-6 bg-[#f8e7d2] dark:bg-[#2f2a1d] rounded-lg shadow-md">
+            <h2 className="text-2xl font-bold mb-6 text-center text-[#8b5a2b] dark:text-[#e0c589] font-['Playfair_Display',_serif]">Register</h2>
+            <form onSubmit={handleSubmit}>
+              <div className="mb-4">
+                <label className="block text-sm font-medium mb-1 text-[#8b5a2b] dark:text-[#e0c589] font-['Lora',_serif]">Username</label>
+                <input
+                  type="text"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  className="w-full p-2 border border-[#d4a373] dark:border-[#a68a64] rounded-lg bg-[#fff9e6] dark:bg-[#3b3421] text-[#8b5a2b] dark:text-[#e0c589] font-['Lora',_serif] caret-[#8b5a2b] dark:caret-[#e0c589] focus:outline-none focus:ring-2 focus:ring-[#a66b3b] dark:focus:ring-[#d4a373]"
+                  required
+                />
+              </div>
+              <div className="mb-4">
+                <label className="block text-sm font-medium mb-1 text-[#8b5a2b] dark:text-[#e0c589] font-['Lora',_serif]">Email (Optional)</label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full p-2 border border-[#d4a373] dark:border-[#a68a64] rounded-lg bg-[#fff9e6] dark:bg-[#3b3421] text-[#8b5a2b] dark:text-[#e0c589] font-['Lora',_serif] caret-[#8b5a2b] dark:caret-[#e0c589] focus:outline-none focus:ring-2 focus:ring-[#a66b3b] dark:focus:ring-[#d4a373]"
+                />
+              </div>
+              <div className="mb-6">
+                <label className="block text-sm font-medium mb-1 text-[#8b5a2b] dark:text-[#e0c589] font-['Lora',_serif]">Password</label>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full p-2 border border-[#d4a373] dark:border-[#a68a64] rounded-lg bg-[#fff9e6] dark:bg-[#3b3421] text-[#8b5a2b] dark:text-[#e0c589] font-['Lora',_serif] caret-[#8b5a2b] dark:caret-[#e0c589] focus:outline-none focus:ring-2 focus:ring-[#a66b3b] dark:focus:ring-[#d4a373]"
+                  required
+                />
+              </div>
+              <button
+                type="submit"
+                className="w-full bg-[#8b5a2b] dark:bg-[#d4a373] text-[#f8e7d2] dark:text-[#2f2a1d] p-2 rounded-lg hover:bg-[#a66b3b] dark:hover:bg-[#e0c589] font-['Playfair_Display',_serif] transition"
+              >
+                Register
+              </button>
+            </form>
+          </div>
+        );
+      };
+
+      // Login Component
+      const Login = () => {
+        const [username, setUsername] = useState('');
+        const [password, setPassword] = useState('');
+        const { login } = useContext(AuthContext);
+        console.log('Login rendered');
+
+        const handleSubmit = async (e) => {
+          e.preventDefault();
+          const success = await login(username, password);
+          if (success) {
+            window.location.hash = '#/journal';
+          }
+        };
+
+        return (
+          <div className="max-w-md mx-auto mt-10 p-6 bg-[#f8e7d2] dark:bg-[#2f2a1d] rounded-lg shadow-md">
+            <h2 className="text-2xl font-bold mb-6 text-center text-[#8b5a2b] dark:text-[#e0c589] font-['Playfair_Display',_serif]">Login</h2>
+            <form onSubmit={handleSubmit}>
+              <div className="mb-4">
+                <label className="block text-sm font-medium mb-1 text-[#8b5a2b] dark:text-[#e0c589] font-['Lora',_serif]">Username</label>
+                <input
+                  type="text"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  className="w-full p-2 border border-[#d4a373] dark:border-[#a68a64] rounded-lg bg-[#fff9e6] dark:bg-[#3b3421] text-[#8b5a2b] dark:text-[#e0c589] font-['Lora',_serif] caret-[#8b5a2b] dark:caret-[#e0c589] focus:outline-none focus:ring-2 focus:ring-[#a66b3b] dark:focus:ring-[#d4a373]"
+                  required
+                />
+              </div>
+              <div className="mb-6">
+                <label className="block text-sm font-medium mb-1 text-[#8b5a2b] dark:text-[#e0c589] font-['Lora',_serif]">Password</label>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full p-2 border border-[#d4a373] dark:border-[#a68a64] rounded-lg bg-[#fff9e6] dark:bg-[#3b3421] text-[#8b5a2b] dark:text-[#e0c589] font-['Lora',_serif] caret-[#8b5a2b] dark:caret-[#e0c589] focus:outline-none focus:ring-2 focus:ring-[#a66b3b] dark:focus:ring-[#d4a373]"
+                  required
+                />
+              </div>
+              <button
+                type="submit"
+                className="w-full bg-[#8b5a2b] dark:bg-[#d4a373] text-[#f8e7d2] dark:text-[#2f2a1d] p-2 rounded-lg hover:bg-[#a66b3b] dark:hover:bg-[#e0c589] font-['Playfair_Display',_serif] transition"
+              >
+                Login
+              </button>
+            </form>
+          </div>
+        );
+      };
+
+      // Journal Component
+      const Journal = () => {
+        const { user } = useContext(AuthContext);
+        const [entries, setEntries] = useState([]);
+        console.log('Journal rendered', { user });
+
+        useEffect(() => {
+          if (user) fetchEntries();
+        }, [user]);
+
+        const fetchEntries = async () => {
+          try {
+            const response = await axios.get('http://localhost:9000/journal');
+            console.log('Fetched entries:', response.data);
+            const normalizedEntries = response.data.map(entry => ({
+              ...entry,
+              id: entry.id ? entry.id.toString() : null
+            }));
+            console.log('Normalized entries:', normalizedEntries);
+            setEntries(normalizedEntries);
+          } catch (error) {
+            console.error('Fetch entries error:', error.response?.data || error.message);
+            alert('Failed to fetch journal entries');
+            setEntries([]); // Clear entries on error
+          }
+        };
+
+        const handleDelete = async (id) => {
+          if (window.confirm('Are you sure you want to delete this entry?')) {
+            try {
+              console.log('Deleting entry with id:', id, 'Type:', typeof id);
+              console.log('Current entries before deletion:', entries);
+              await axios.delete(`http://localhost:9000/journal/${id}`);
+              // Immediately remove the entry from the state
+              const updatedEntries = entries.filter(entry => {
+                console.log(`Comparing entry.id: ${entry.id} (type: ${typeof entry.id}) with id: ${id} (type: ${typeof id})`);
+                return entry.id !== id;
+              });
+              console.log('Updated entries after deletion:', updatedEntries);
+              setEntries([...updatedEntries]); // Spread to ensure new array reference
+              alert('Entry deleted successfully!');
+              // Refresh the list to ensure consistency
+              await fetchEntries();
+            } catch (error) {
+              console.error('Delete entry error:', error.response?.data || error.message);
+              alert('Failed to delete entry');
+              // Refresh on error to ensure consistency
+              await fetchEntries();
+            }
+          }
+        };
+
+        if (!user) {
+          window.location.hash = '#/login';
+          return null;
+        }
+
+        return (
+          <div className="max-w-7xl mx-auto mt-10 px-4 sm:px-6 lg:px-8">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold text-[#8b5a2b] dark:text-[#e0c589] font-['Playfair_Display',_serif]">Your Journal Entries</h2>
+              <a
+                href="#/journal/new"
+                className="bg-[#8b5a2b] dark:bg-[#d4a373] text-[#f8e7d2] dark:text-[#2f2a1d] px-4 py-2 rounded-lg hover:bg-[#a66b3b] dark:hover:bg-[#e0c589] font-['Playfair_Display',_serif] transition"
+              >
+                New Entry
+              </a>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {entries.map((entry) => (
+                <div key={entry.id} className="bg-[#f8e7d2] dark:bg-[#2f2a1d] p-4 rounded-lg shadow-md">
+                  <h3 className="text-lg font-semibold text-[#8b5a2b] dark:text-[#e0c589] font-['Playfair_Display',_serif]">{entry.title}</h3>
+                  <p className="text-[#8b5a2b] dark:text-[#e0c589] font-['Lora',_serif]">{entry.content.substring(0, 100)}...</p>
+                  <p className="text-sm text-[#a66b3b] dark:text-[#d4a373] font-['Lora',_serif]">{new Date(entry.date).toLocaleDateString()}</p>
+                  <div className="mt-4 flex space-x-2">
+                    <a
+                      href={`#/journal/edit/${entry.id}`}
+                      className="text-[#8b5a2b] dark:text-[#e0c589] hover:underline font-['Lora',_serif]"
+                    >
+                      Edit
+                    </a>
+                    <button
+                      onClick={() => handleDelete(entry.id)}
+                      className="text-red-600 dark:text-red-400 hover:underline font-['Lora',_serif]"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      };
+
+      // Entry Page Component (for New and Edit)
+      const EntryPage = () => {
+        const { user } = useContext(AuthContext);
+        const [title, setTitle] = useState('');
+        const [content, setContent] = useState('');
+        const [entryId, setEntryId] = useState(null);
+        const [isEditMode, setIsEditMode] = useState(false);
+
+        useEffect(() => {
+          const hash = window.location.hash;
+          if (hash.startsWith('#/journal/edit/')) {
+            const id = hash.split('/').pop();
+            setEntryId(id);
+            setIsEditMode(true);
+            fetchEntry(id);
+          }
+        }, []);
+
+        const fetchEntry = async (id) => {
+          try {
+            const response = await axios.get(`http://localhost:9000/journal/${id}`);
+            const entry = response.data;
+            setTitle(entry.title);
+            setContent(entry.content);
+          } catch (error) {
+            console.error('Fetch entry error:', error.response?.data);
+            alert('Failed to fetch entry');
+            window.location.hash = '#/journal';
+          }
+        };
+
+        const handleSave = async (e) => {
+          e.preventDefault();
+          try {
+            const entry = { title, content };
+            if (isEditMode) {
+              await axios.put(`http://localhost:9000/journal/${entryId}`, entry);
+              alert('Entry updated successfully!');
+            } else {
+              await axios.post('http://localhost:9000/journal', entry);
+              alert('Entry created successfully!');
+            }
+            window.location.hash = '#/journal';
+          } catch (error) {
+            console.error('Save entry error:', error.response?.data);
+            alert(error.response?.data || 'Failed to save entry');
+          }
+        };
+
+        if (!user) {
+          window.location.hash = '#/login';
+          return null;
+        }
+
+        return (
+          <div className="min-h-screen bg-[#f5d7b5] dark:bg-[#3b3421] py-10 px-4 sm:px-6 lg:px-8">
+            <div className="max-w-4xl mx-auto bg-gradient-to-br from-[#f8e7d2] to-[#f5d7b5] dark:from-[#2f2a1d] dark:to-[#3b3421] rounded-2xl shadow-2xl p-8 border-4 border-[#d4a373] dark:border-[#a68a64] relative">
+              <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/leather.png')] opacity-15 rounded-2xl"></div>
+              <div className="absolute left-0 top-0 bottom-0 w-6 bg-[#8b5a2b] dark:bg-[#d4a373] rounded-l-2xl shadow-inner"></div>
+              <div className="absolute left-2 top-0 bottom-0 w-1 bg-[#a66b3b] dark:bg-[#e0c589]"></div>
+
+              <div className="flex justify-between items-center mb-8">
+                <h2 className="text-4xl font-bold text-[#8b5a2b] dark:text-[#e0c589] font-['Playfair_Display',_serif] tracking-wide">
+                  {isEditMode ? 'Edit Your Entry' : 'New Journal Entry'}
+                </h2>
+                <a
+                  href="#/journal"
+                  className="text-[#8b5a2b] dark:text-[#e0c589] hover:text-[#a66b3b] dark:hover:text-[#d4a373] font-['Lora',_serif] text-lg"
+                >
+                  Back to Journal
+                </a>
+              </div>
+
+              <form onSubmit={handleSave}>
+                <div className="mb-8">
+                  <label className="block text-lg font-medium mb-3 text-[#8b5a2b] dark:text-[#e0c589] font-['Playfair_Display',_serif] tracking-wide">
+                    Title
+                  </label>
+                  <input
+                    type="text"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    className="w-full p-4 border border-[#d4a373] dark:border-[#a68a64] rounded-lg bg-[#fff9e6] dark:bg-[#3b3421] text-[#8b5a2b] dark:text-[#e0c589] focus:outline-none focus:ring-2 focus:ring-[#a66b3b] dark:focus:ring-[#d4a373] font-['Lora',_serif] text-lg shadow-inner transition duration-200 caret-[#8b5a2b] dark:caret-[#e0c589]"
+                    placeholder="A Memorable Day..."
+                    required
+                  />
+                </div>
+                <div className="mb-8">
+                  <label className="block text-lg font-medium mb-3 text-[#8b5a2b] dark:text-[#e0c589] font-['Playfair_Display',_serif] tracking-wide">
+                    Your Thoughts
+                  </label>
+                  <textarea
+                    value={content}
+                    onChange={(e) => setContent(e.target.value)}
+                    className="w-full p-4 border border-[#d4a373] dark:border-[#a68a64] rounded-lg bg-[#fff9e6] dark:bg-[#3b3421] text-[#8b5a2b] dark:text-[#e0c589] focus:outline-none focus:ring-2 focus:ring-[#a66b3b] dark:focus:ring-[#d4a373] font-['Lora',_serif] h-64 resize-none text-lg shadow-inner transition duration-200 caret-[#8b5a2b] dark:caret-[#e0c589]"
+                    placeholder="Today, I felt..."
+                    required
+                  ></textarea>
+                </div>
+                <div className="flex justify-end space-x-4">
+                  <a
+                    href="#/journal"
+                    className="px-6 py-3 bg-[#d4a373] dark:bg-[#a68a64] text-[#8b5a2b] dark:text-[#e0c589] rounded-lg hover:bg-[#a66b3b] dark:hover:bg-[#8b6f47] transition font-['Playfair_Display',_serif] text-lg tracking-wide shadow-md hover:shadow-lg"
+                  >
+                    Cancel
+                  </a>
+                  <button
+                    type="submit"
+                    className="px-6 py-3 bg-[#8b5a2b] dark:bg-[#d4a373] text-[#f8e7d2] dark:text-[#2f2a1d] rounded-lg hover:bg-[#a66b3b] dark:hover:bg-[#e0c589] transition font-['Playfair_Display',_serif] text-lg tracking-wide shadow-md hover:shadow-lg"
+                  >
+                    Save Entry
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        );
+      };
+
+      // Router Component
+      const App = () => {
+        const [route, setRoute] = useState(window.location.hash.slice(1) || '/register');
+        console.log('App rendered, route:', route);
+
+        useEffect(() => {
+          const handleHashChange = () => {
+            const newRoute = window.location.hash.slice(1) || '/register';
+            setRoute(newRoute);
+            console.log('Route changed to:', newRoute);
+          };
+          window.addEventListener('hashchange', handleHashChange);
+          return () => window.removeEventListener('hashchange', handleHashChange);
+        }, []);
+
+        let content = null;
+        if (route === '/register') {
+          content = <Register />;
+        } else if (route === '/login') {
+          content = <Login />;
+        } else if (route === '/journal') {
+          content = <Journal />;
+        } else if (route === '/journal/new' || route.startsWith('/journal/edit/')) {
+          content = <EntryPage />;
+        } else {
+          console.warn('Unknown route:', route);
+          content = <div className="text-center mt-10 text-[#8b5a2b] dark:text-[#e0c589] font-['Playfair_Display',_serif]">404: Page Not Found</div>;
+        }
+
+        return (
+          <AuthProvider>
+            <Navbar />
+            <div className="min-h-screen">
+              {content}
+            </div>
+          </AuthProvider>
+        );
+      };
+
+      // Render
+      console.log('Rendering to #root');
+      const rootElement = document.getElementById('root');
+      if (!rootElement) {
+        console.error('No #root element found');
+        throw new Error('No #root element');
+      }
+      const root = ReactDOM.createRoot(rootElement);
+      root.render(<App />);
+    } catch (error) {
+      console.error('Error in script:', error);
+    }
+  </script>
+</body>
+</html>
