@@ -15,15 +15,15 @@ A journal application built with a React frontend and Spring Boot backend. This 
 
 
 
-- **Sentiment Analysis**: Analyze the sentiment of journal entries to understand emotional tone (e.g., happy, sad) using the Sentiment: enum.
+- **Sentiment Analysis**: Analyze the sentiment of journal entries to understand emotional tone (e.g., happy, sad) using the `Sentiment`: enum.
 
 
 
-- **Weather Integration**: Fetch weather data for journal entries via the for WeatherService: to contextualize entries (e.g., "It was sunny when I wrote this").
+- **Weather Integration**: Fetch weather data for journal entries via the for `WeatherService`: to contextualize entries (e.g., "It was sunny when I wrote this").
 
 
 
-- **Text-to-Speech**: Convert journal entries to speech using the TextToSpeechService for accessibility.
+- **Text-to-Speech**: Convert journal entries to speech using the `TextToSpeechService` for accessibility.
 
 
 
@@ -33,65 +33,65 @@ A journal application built with a React frontend and Spring Boot backend. This 
 
 
 
-Blacklist Cleanup: Automatically clean up expired JWT tokens using BlacklistCleanupScheduler.
+  - **Blacklist Cleanup:** Automatically clean up expired JWT tokens using `BlacklistCleanupScheduler`.
 
 
 
-User Notifications: Send scheduled email reminders or updates via UserScheduler and EmailService.
+  **User Notifications:** Send scheduled email reminders or updates via `UserScheduler` and `EmailService`.
 
 
 
--forRedisService: - Caching: Improve performance with Redis caching for frequently accessed data, managed by RedisService.
+- **Caching**: Improve performance with Redis caching for frequently accessed data, managed by `RedisService`.
 
 
-MongoDB Database: Store journal entries and user data in a scalable MongoDB database.
+- **MongoDB Database**: Store journal entries and user data in a scalable **MongoDB** database.
 
-Tech Stack
+## Tech Stack
 
-Frontend
-
-
-
-
-
-React: For building the interactive user interface.
-
-
-
-Axios: For making HTTP requests to the backend.
-
-
-
-Tailwind CSS: For styling (via inline styles in styles.css).
-
-Backend
+### Frontend
 
 
 
 
 
-Spring Boot: For building the RESTful API and handling business logic.
+- **React**: For building the interactive user interface.
 
 
 
-MongoDB: NoSQL database for storing user and journal data.
+- **Axios**: For making HTTP requests to the backend.
 
 
 
-Redis: In-memory caching for faster data retrieval.
+- **Tailwind CSS**: For styling (via inline styles in `styles.css`).
 
-
-
-JWT: For secure authentication and authorization.
-
-Other Tools
+### Backend
 
 
 
 
 
-Maven: Dependency management for the backend (configured in pom.xml).
+- **Spring Boot**: For building the RESTful API and handling business logic.
 
 
 
-http-server: Lightweight server to serve the frontend during development.
+- **MongoDB**: NoSQL database for storing user and journal data.
+
+
+
+- **Redis**: In-memory caching for faster data retrieval.
+
+
+
+- **JWT**: For secure authentication and authorization.
+
+### Other Tools
+
+
+
+
+
+- **Maven**: Dependency management for the backend (configured in pom.xml).
+
+
+
+- **http-server**: Lightweight server to serve the frontend during development.
